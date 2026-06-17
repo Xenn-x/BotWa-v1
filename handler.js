@@ -74,12 +74,43 @@ const commands = {
         }
     },
     'ping': {
-        kategori: '🛠️ UTILITY',
-        desc: 'Cek respon sistem',
-        run: async (sock, m, remoteJid) => {
-            await sock.sendMessage(remoteJid, { text: 'System loaded succesfully ✅' }, { quoted: m })
-        }
-    },
+            kategori: '🛠️ UTILITY',
+            desc: 'Cek respon & info server',
+            aliases: ['info', 'server'],
+            run: async (sock, m, remoteJid, args, textArgs, ctx) => {
+                // Panggil modul OS bawaan Node.js
+                const os = await import('os');
+                
+                // Kalkulasi RAM
+                const totalMem = os.totalmem();
+                const freeMem = os.freemem();
+                const usedMem = totalMem - freeMem;
+                
+                const formatSize = (bytes) => (bytes / (1024 ** 3)).toFixed(2) + ' GB';
+                
+                // Kalkulasi Uptime Server
+                const uptimeSeconds = os.uptime();
+                const days = Math.floor(uptimeSeconds / (3600 * 24));
+                const hours = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
+                const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+            
+                // Ambil Info CPU
+                const cpuModel = os.cpus()[0].model;
+                const cpuCores = os.cpus().length;
+            
+                const serverInfo = `*💻 SERVER STATUS 💻*
+                
+    * ⏱️ *Uptime:* ${days} Hari ${hours} Jam ${minutes} Menit
+    * 🖥️ *OS:* ${os.type()} ${os.release()} (${os.arch()})
+    * ⚙️ *CPU:* ${cpuModel} (${cpuCores} Cores)
+    * 📊 *RAM:* ${formatSize(usedMem)} / ${formatSize(totalMem)}
+    * 🏓 *Status:* Mesin nyala dan siap tempur! ✅
+            
+    > *XennBot System Monitor*`;
+            
+                await sock.sendMessage(remoteJid, { text: serverInfo }, { quoted: m });
+            }
+        },
     'rvo': {
         kategori: '👑 OWNER ONLY',
         desc: 'Bobol media 1x lihat',
