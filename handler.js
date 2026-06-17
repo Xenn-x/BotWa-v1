@@ -60,9 +60,9 @@ const commands = {
                 if (commands[cmd].hide) continue; 
                 const cat = commands[cmd].kategori;
                 if (!grouped[cat]) grouped[cat] = [];
-                
-                const aliasText = commands[cmd].aliases ? ` / @${commands[cmd].aliases.join(' / @')}` : '';
-                grouped[cat].push(`- *@${cmd}${aliasText}* : ${commands[cmd].desc}`);
+                    
+        const aliasText = commands[cmd].aliases ? ` / @${commands[cmd].aliases.join(' / @')}` : '';
+        grouped[cat].push(`- *@${cmd}${aliasText}* : ${commands[cmd].desc}`);
             }
 
             for (const cat in grouped) {
@@ -351,37 +351,41 @@ export async function messageHandler(sock, m) {
     try {
         if (!m.message) return
 
-        const remoteJid = m.key.remoteJid;
-        
+const remoteJid = m.key.remoteJid;
         const isGroup = remoteJid?.endsWith('@g.us'); 
 
+        // 1. 🔥 KELUARIN ILMU HITAM ANTI-LID DULU (Pindah ke Atas!) 🔥
+        let senderJid = m.key.participant || remoteJid;
+        if (m.key.senderPn) {
+            senderJid = m.key.senderPn;
+        }
+        const senderNumber = senderJid.split('@')[0].split(':')[0];
+        const isOwner = senderNumber === ownerNumber;
+
+        // 2. 🛡️ BARU KITA CEK STATUS ADMIN 🛡️
         let isSenderAdmin = false;
         let isBotAdmin = false;
 
         if (isGroup) { 
             const groupMeta = await sock.groupMetadata(remoteJid);
-            const groupAdmins = groupMeta.participants.filter(v => v.admin !== null).map(v => v.id)
+            const groupAdmins = groupMeta.participants.filter(v => v.admin !== null).map(v => v.id);
             
-            isSenderAdmin = groupAdmins.includes(m.key.participant || remoteJid)
-            const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-            isBotAdmin = groupAdmins.includes(botId)
+            // Sekarang ngeceknya pake senderJid yang udah tembus anti-LID
+            isSenderAdmin = groupAdmins.includes(senderJid);
+            const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+            isBotAdmin = groupAdmins.includes(botId);
         } 
 
-        const isStatus = remoteJid === 'status@broadcast'
+        // 3. CEK STATUS WA
+        const isStatus = remoteJid === 'status@broadcast';
         if (isStatus) {
-            await handleStatusReaction(sock, m)
-            return
+            await handleStatusReaction(sock, m);
+            return;
         }
 
-        let senderJid = m.key.participant || remoteJid
-        if (m.key.senderPn) {
-            senderJid = m.key.senderPn
-        }
-        const senderNumber = senderJid.split('@')[0].split(':')[0] 
-        const isOwner = senderNumber === ownerNumber
+        const textMessage = m.message.conversation || m.message.extendedTextMessage?.text || "";
 
-        const textMessage = m.message.conversation || m.message.extendedTextMessage?.text || ""
-
+        // (Lanjut ke kode CCTV Terminal lu di bawahnya...)
         if (textMessage || m.message.imageMessage || m.message.videoMessage) {
             let chatType = 'Pribadi'
 
