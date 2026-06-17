@@ -6,10 +6,9 @@ import { Sticker, StickerTypes } from 'wa-sticker-formatter'
 import Jimp from 'jimp'
 
 // 1. CONFIG OWNER
-const ownerNumber = '263548185911443' // Ingat, ini kode negara Zimbabwe wkwk
+const ownerNumber = '263548185911443' 
 const longSpace = '\u2800\n'.repeat(29) 
 
-// Tinggal lo ganti teksnya sesuai selera
 const packname = `Created by Xenn Project\n\n${longSpace}make doang gk donate\nhttps://tako.id/Xenn_al\nFollow`
 const author = 'Follow ig- @Xenn_al_'
 
@@ -37,7 +36,6 @@ const makeBratSticker = async (text) => {
     const x = centerX - (textWidth / 2);
     const y = centerY - (textHeight / 2);
 
-    // Efek semi-blur ala brat
     image.print(font, x+2, y+2, { text: text, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, 480);
     image.print(font, x-2, y-2, { text: text, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, 480);
     image.print(font, x, y, { text: text, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, 480);
@@ -50,7 +48,6 @@ const makeBratSticker = async (text) => {
 // 🧠 COMMAND REGISTRY (AUTO-UPDATE MENU)
 // ==========================================
 const commands = {
-    // 1. Kita masukin Menu aja dulu sebagai pancingan
     'menu': {
         kategori: '🛠️ UTILITY',
         desc: 'Nampilin daftar fitur otomatis',
@@ -75,12 +72,242 @@ const commands = {
 
             await sock.sendMessage(remoteJid, { text: menuText }, { quoted: m })
         }
+    },
+    'ping': {
+        kategori: '🛠️ UTILITY',
+        desc: 'Cek respon sistem',
+        run: async (sock, m, remoteJid) => {
+            await sock.sendMessage(remoteJid, { text: 'System loaded succesfully ✅' }, { quoted: m })
+        }
+    },
+    'rvo': {
+        kategori: '👑 OWNER ONLY',
+        desc: 'Bobol media 1x lihat',
+        aliases: ['readviewonce'],
+        run: async (sock, m, remoteJid, args, textArgs, ctx) => {
+            if (!ctx.isOwner && !m.key.fromMe) return sock.sendMessage(remoteJid, { text: 'Akses Ditolak!' }, { quoted: m })
+
+            const quotedMsg = m.message.extendedTextMessage?.contextInfo?.quotedMessage
+            if (!quotedMsg) return sock.sendMessage(remoteJid, { text: '⚠️ Bos, reply dulu foto/video 1x lihatnya!' }, { quoted: m })
+
+            let realMsg = quotedMsg.viewOnceMessageV2?.message || quotedMsg.viewOnceMessage?.message || quotedMsg.viewOnceMessageV2Extension?.message || quotedMsg
+            const mediaType = Object.keys(realMsg).find(key => key === 'imageMessage' || key === 'videoMessage')
+            
+            if (!mediaType) return sock.sendMessage(remoteJid, { text: 'yang lu reply bukan media bos!' }, { quoted: m })
+
+            const mediaObj = realMsg[mediaType]
+            const isViewOnce = mediaObj?.viewOnce || quotedMsg.viewOnceMessageV2 || quotedMsg.viewOnceMessage || quotedMsg.viewOnceMessageV2Extension
+            
+            if (!isViewOnce) return sock.sendMessage(remoteJid, { text: '⚠️ Kocak, itu kan foto/video biasa, ngapain dibobol!' }, { quoted: m })
+
+            await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key } })
+
+            try {
+                const stream = await downloadContentFromMessage(mediaObj, mediaType.replace('Message', ''))
+                let buffer = Buffer.from([])
+                for await(const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+
+                const finalCaption = mediaObj.caption ? `\n> *Caption:* ${mediaObj.caption}` : ''
+
+                if (mediaType === 'imageMessage') {
+                    await sock.sendMessage(remoteJid, { image: buffer, caption: finalCaption }, { quoted: m })
+                } else if (mediaType === 'videoMessage') {
+                    await sock.sendMessage(remoteJid, { video: buffer, caption: finalCaption, mimetype: 'video/mp4' }, { quoted: m })
+                }
+                
+                await sock.sendMessage(remoteJid, { react: { text: '🔥', key: m.key } })
+            } catch (err) {
+                console.error('Error bobol RVO:', err)
+                await sock.sendMessage(remoteJid, { text: 'Waduh, gagal jir' }, { quoted: m })
+            }
+        }
+    },
+    'swemot': {
+        kategori: '👑 OWNER ONLY',
+        desc: 'Menu radar react status',
+        run: async (sock, m, remoteJid, args, textArgs, ctx) => {
+            if (ctx.isOwner) {
+                await handleSwCommand(sock, m, args)
+            } else {
+                await sock.sendMessage(remoteJid, { text: '⛔ Eits, dilarang masuk! Ini fitur khusus Bos Xenn.' }, { quoted: m })
+            }
+        }
+    },
+    'shutdown': {
+        kategori: '👑 OWNER ONLY',
+        desc: 'Matiin mesin bot',
+        run: async (sock, m, remoteJid, args, textArgs, ctx) => {
+            if (!ctx.isOwner) return
+            await sock.sendMessage(remoteJid, { text: '👋 Oke bos, bot cabut dulu...' })
+            process.exit()
+        }
+    },
+    'ttdl': {
+        kategori: '🎨 STICKER & MEDIA',
+        desc: 'Download VT tanpa watermark',
+        aliases: ['tiktok'],
+        run: async (sock, m, remoteJid, args) => {
+            if (!args[0]) return sock.sendMessage(remoteJid, { text: '⚠ *Mana link TikTok-nya ngab?*' }, { quoted: m })
+
+            await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key } })
+            try {
+                const result = await tiktok2(args[0])
+                await sock.sendMessage(
+                    remoteJid,
+                    {
+                        video: result.videoBuffer,
+                        mimetype: 'video/mp4',
+                        caption: `*🎁 Xenn Tiktok Downloader*\n\n👤 *Author:* @${result.author}\n📝 *Desc:* ${result.title}\n🎵 *Music:* ${result.music}\n\n> *di-download pake keringat xennBot*`
+                    },
+                    { quoted: m }
+                )
+                await sock.sendMessage(remoteJid, { react: { text: '✅', key: m.key } })
+            } catch (error) {
+                await sock.sendMessage(remoteJid, { text: '❌ *Waduh gagal!* Link-nya bener ga tuh?' }, { quoted: m })
+            }
+        }
+    },
+    'hidetag': {
+        kategori: '👑 OWNER ONLY',
+        desc: 'Tag semua member tanpa ketahuan',
+        run: async (sock, m, remoteJid, args, textArgs, ctx) => {
+            if (!ctx.isGroup || !ctx.isOwner) return
+            try {
+                const groupMetadata = await sock.groupMetadata(remoteJid)
+                const participants = groupMetadata.participants
+                const allMembers = participants.map(mem => mem.id)
+                const commandRegex = new RegExp(`^@${ctx.command}\\s*`, 'i')
+                const pesan = ctx.textMessage.replace(commandRegex, '').trim() || '📢 *PENGUMUMAN PENTING* 📢'
+
+                await sock.sendMessage(remoteJid, { text: pesan, mentions: allMembers })
+            } catch (err) {
+                await sock.sendMessage(remoteJid, { text: '❌ Waduh gagal hidetag, bot udah jadi admin belum?' }, { quoted: m })
+            }
+        }
+    },
+    's': {
+        kategori: '🎨 STICKER & MEDIA',
+        desc: 'Convert gambar/video jadi stiker',
+        aliases: ['sticker'],
+        run: async (sock, m, remoteJid) => {
+            try {
+                const quoted = m.message.extendedTextMessage?.contextInfo?.quotedMessage
+                const isMedia = m.message.imageMessage || m.message.videoMessage || quoted?.imageMessage || quoted?.videoMessage
+                
+                if (!isMedia) return await sock.sendMessage(remoteJid, { text: '⚠️ Kirim/reply gambar atau video (<10 detik) dengan caption @s' }, { quoted: m })
+
+                await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key }})
+                
+                let mediaTarget = quoted?.imageMessage || quoted?.videoMessage ? quoted : m.message
+                let mediaType = mediaTarget.imageMessage ? 'imageMessage' : 'videoMessage'
+                
+                const stream = await downloadContentFromMessage(mediaTarget[mediaType], mediaType.replace('Message', ''))
+                let mediaBuffer = Buffer.from([])
+                for await(const chunk of stream) mediaBuffer = Buffer.concat([mediaBuffer, chunk])
+
+                let stickerType = mediaType === 'videoMessage' ? StickerTypes.CROP : StickerTypes.FULL;
+                const stickerBuffer = await createSticker(mediaBuffer, stickerType)
+                
+                await sock.sendMessage(remoteJid, { sticker: stickerBuffer }, { quoted: m })
+                await sock.sendMessage(remoteJid, { react: { text: '✅', key: m.key }})
+            } catch (err) {
+                console.error(err)
+                await sock.sendMessage(remoteJid, { text: '❌ Gagal bikin stiker ngab.' }, { quoted: m })
+            }
+        }
+    },
+    'brat': {
+        kategori: '🎨 STICKER & MEDIA',
+        desc: 'Bikin stiker teks ala brat',
+        run: async (sock, m, remoteJid, args, textArgs) => {
+            if (!textArgs) return await sock.sendMessage(remoteJid, { text: '⚠️ Contoh: @brat anak rpl nih senggol dong' }, { quoted: m })
+            await sock.sendMessage(remoteJid, { react: { text: '✍️', key: m.key }})
+
+            const bratBuffer = await makeBratSticker(textArgs)
+            if (!bratBuffer) return await sock.sendMessage(remoteJid, { text: '❌ Gagal membuat brat sticker.' }, { quoted: m })
+
+            await sock.sendMessage(remoteJid, { sticker: bratBuffer }, { quoted: m })
+        }
+    },
+    'meme': {
+        kategori: '🎨 STICKER & MEDIA',
+        desc: 'Nempelin teks meme di gambar',
+        run: async (sock, m, remoteJid, args, textArgs) => {
+            try {
+                const quoted = m.message.extendedTextMessage?.contextInfo?.quotedMessage
+                const isImage = m.message.imageMessage || quoted?.imageMessage
+                
+                if (!isImage) return await sock.sendMessage(remoteJid, { text: '⚠️ Balas/kirim GAMBAR dengan caption @meme Atas | Bawah' }, { quoted: m })
+                if (!textArgs.includes('|')) return await sock.sendMessage(remoteJid, { text: '⚠️ Gunakan format: @meme Teks Atas | Teks Bawah' }, { quoted: m })
+
+                await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key }})
+                
+                let mediaTarget = quoted?.imageMessage ? quoted : m.message
+                const stream = await downloadContentFromMessage(mediaTarget.imageMessage, 'image')
+                let mediaBuffer = Buffer.from([])
+                for await(const chunk of stream) mediaBuffer = Buffer.concat([mediaBuffer, chunk])
+
+                const [topText, bottomText] = textArgs.split('|').map(t => t.trim())
+
+                const image = await Jimp.read(mediaBuffer)
+                image.cover(512, 512)
+                const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE)
+                const fontBorder = await Jimp.loadFont(Jimp.FONT_SANS_64_BLACK)
+
+                const printOutline = (img, fnt, fntBorder, x, y, txt, width) => {
+                     img.print(fntBorder, x-2, y-2, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
+                     img.print(fntBorder, x+2, y-2, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
+                     img.print(fntBorder, x-2, y+2, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
+                     img.print(fntBorder, x+2, y+2, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
+                     img.print(fnt, x, y, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
+                }
+
+                if (topText) printOutline(image, font, fontBorder, 10, 20, topText, 492)
+                if (bottomText) {
+                    const bottomHeight = Jimp.measureTextHeight(font, bottomText, 492)
+                    printOutline(image, font, fontBorder, 10, 512 - bottomHeight - 20, bottomText, 492)
+                }
+
+                const memeBuffer = await image.getBufferAsync(Jimp.MIME_PNG)
+                const stickerMeme = await createSticker(memeBuffer, StickerTypes.FULL)
+                
+                await sock.sendMessage(remoteJid, { sticker: stickerMeme }, { quoted: m })
+                await sock.sendMessage(remoteJid, { react: { text: '✅', key: m.key }})
+            } catch (err) {
+                console.error(err)
+                await sock.sendMessage(remoteJid, { text: '❌ Gagal bikin meme ngab.' }, { quoted: m })
+            }
+        }
+    },
+    'kick': {
+        kategori: '🛡️ ADMIN & GRUP',
+        desc: 'Tendang member dari grup',
+        aliases: ['tendang'],
+        run: async (sock, m, remoteJid, args, textArgs, ctx) => {
+            if (!ctx.isGroup) return await sock.sendMessage(remoteJid, { text: '⚠️ Woy, fitur ini cuma bisa dipake di dalem grup!' }, { quoted: m })
+            if (!ctx.isSenderAdmin && !ctx.isOwner) return await sock.sendMessage(remoteJid, { text: '⚠️ Lu sapa? Fitur sadis ini cuma buat Admin & Owner!' }, { quoted: m })
+            if (!ctx.isBotAdmin) return await sock.sendMessage(remoteJid, { text: '⚠️ Botnya jadiin admin dulu bos, gimana mau nendang anak orang!' }, { quoted: m })
+
+            const quotedUser = m.message.extendedTextMessage?.contextInfo?.participant
+            const mentionedUsers = m.message.extendedTextMessage?.contextInfo?.mentionedJid || []
+            const targetKick = quotedUser || (mentionedUsers.length > 0 ? mentionedUsers[0] : null)
+
+            if (!targetKick) return await sock.sendMessage(remoteJid, { text: '⚠️ Tag atau balas chat orang yang mau ditendang!\nContoh: *@kick @orangnya*' }, { quoted: m })
+            if (targetKick === ownerNumber + '@s.whatsapp.net') return await sock.sendMessage(remoteJid, { text: '⚠️ Mana berani gue nendang Bos Xenn!' }, { quoted: m })
+            if (targetKick === sock.user.id.split(':')[0] + '@s.whatsapp.net') return await sock.sendMessage(remoteJid, { text: '⚠️ Buset, botnya mau nendang diri sendiri?!' }, { quoted: m })
+
+            await sock.sendMessage(remoteJid, { text: `👢 Bye bye @${targetKick.split('@')[0]}... Sayonara!`, mentions: [targetKick] })
+            await sock.groupParticipantsUpdate(remoteJid, [targetKick], 'remove')
+        }
     }
-    // Nanti lu bisa tambahin fitur lain ke sini pelan-pelan
 };
 
 // Daftarin alias buat menu
 commands['help'] = { hide: true, run: commands['menu'].run };
+commands['readviewonce'] = { hide: true, run: commands['rvo'].run };
+commands['tiktok'] = { hide: true, run: commands['ttdl'].run };
+commands['sticker'] = { hide: true, run: commands['s'].run };
+commands['tendang'] = { hide: true, run: commands['kick'].run };
 
 // --- HANDLER UTAMA ---
 export async function messageHandler(sock, m) {
@@ -89,19 +316,18 @@ export async function messageHandler(sock, m) {
 
         const remoteJid = m.key.remoteJid;
         
-        // --- TAMBAHIN BARIS INI DI SINI ---
         const isGroup = remoteJid?.endsWith('@g.us'); 
-        // ----------------------------------
 
-        // ... (Kalo ada definisi textMessage atau senderJid biarin aja di sini) ...
-
-        // 1. KITA CEK DULU STATUS ADMIN
         let isSenderAdmin = false;
         let isBotAdmin = false;
 
-        if (isGroup) { // Nah, sekarang mesinnya udah tau isGroup itu apa!
+        if (isGroup) { 
             const groupMeta = await sock.groupMetadata(remoteJid);
-            // ... kode admin lu ...
+            const groupAdmins = groupMeta.participants.filter(v => v.admin !== null).map(v => v.id)
+            
+            isSenderAdmin = groupAdmins.includes(m.key.participant || remoteJid)
+            const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+            isBotAdmin = groupAdmins.includes(botId)
         } 
 
         const isStatus = remoteJid === 'status@broadcast'
@@ -110,7 +336,6 @@ export async function messageHandler(sock, m) {
             return
         }
 
-        // --- 🔥 ILMU HITAM ANTI-LID DARI GITHUB 🔥 ---
         let senderJid = m.key.participant || remoteJid
         if (m.key.senderPn) {
             senderJid = m.key.senderPn
@@ -120,11 +345,7 @@ export async function messageHandler(sock, m) {
 
         const textMessage = m.message.conversation || m.message.extendedTextMessage?.text || ""
 
-        // ==========================================
-        // 🌟 CCTV TERMINAL SUPER BERSIH 🌟
-        // ==========================================
         if (textMessage || m.message.imageMessage || m.message.videoMessage) {
-            const isGroup = remoteJid.endsWith('@g.us')
             let chatType = 'Pribadi'
 
             if (isGroup) {
@@ -149,38 +370,22 @@ export async function messageHandler(sock, m) {
             console.log(`${jam} ${tglBulanTahun}`)
         }
 
-        // ==========================================
-        // 🛡️ SISTEM KEAMANAN GRUP (ANTI-LINK)
-        // ==========================================
-
         if (isGroup) {
-            const groupMeta = await sock.groupMetadata(remoteJid)
-            const groupAdmins = groupMeta.participants.filter(v => v.admin !== null).map(v => v.id)
-            
-            isSenderAdmin = groupAdmins.includes(senderJid)
-            // Cek apakah bot dikasih pangkat admin
-            const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-            isBotAdmin = groupAdmins.includes(botId)
-
-            // Radar Pendeteksi Link (WA, Web, Pinjol, dll)
             const linkRegex = /(chat\.whatsapp\.com|wa\.me|bit\.ly|https?:\/\/)/i
             
             if (linkRegex.test(textMessage) && !isSenderAdmin && !isOwner) {
                 if (!isBotAdmin) {
                     console.log('Ada yang ngirim link, tapi bot bukan admin jadi gabisa ngapus pesannya.')
                 } else {
-                    // Eksekusi: Hapus pesan & kasih peringatan
                     await sock.sendMessage(remoteJid, { delete: m.key })
                     await sock.sendMessage(remoteJid, { 
                         text: `⚠️ *ANTI-LINK DETECTED*\n\nMaaf @${senderNumber}, ngirim link dilarang keras di grup ini. Pesan lu gue sapu! 🧹`,
                         mentions: [senderJid]
                     })
-                    return // Berhenti di sini, command di bawah gak akan dieksekusi
+                    return 
                 }
             }
         }
-        // ==========================================
-        // ==========================================
 
         if (!textMessage.startsWith('@')) return
 
@@ -189,13 +394,12 @@ export async function messageHandler(sock, m) {
         const textArgs = args.join(' ')
 
         const ctx = { 
-            isGroup, isSenderAdmin: false, isOwner, isBotAdmin: false, // (isSenderAdmin dll sesuain sama var di code lu ya)
+            isGroup, isSenderAdmin, isOwner, isBotAdmin,
             pushName: m.pushName || 'User', 
             jam: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), 
             senderNumber, senderJid, textMessage, command 
         }
 
-        // 🚦 EXECUTION ROUTER (Cek di Object dulu)
         if (commands[command]) {
             try {
                 await commands[command].run(sock, m, remoteJid, args, textArgs, ctx)
@@ -204,214 +408,7 @@ export async function messageHandler(sock, m) {
                 await sock.sendMessage(remoteJid, { text: '❌ Waduh, mesin botnya error pas jalanin ini ngab.' }, { quoted: m })
             }
         } 
-        // Kalau ga ada di Object, baru lari ke Switch-Case lama lu
-        else {
-
-        switch (command) {
-            case 'ping':
-                await sock.sendMessage(remoteJid, { text: 'System loaded succesfully ✅' }, { quoted: m })
-                break
-
-            case 'rvo':
-            case 'readviewonce':
-                if (!isOwner && !m.key.fromMe) return sock.sendMessage(remoteJid, { text: 'Akses Ditolak!' }, { quoted: m })
-
-                const quotedMsg = m.message.extendedTextMessage?.contextInfo?.quotedMessage
-                if (!quotedMsg) return sock.sendMessage(remoteJid, { text: '⚠️ Bos, reply dulu foto/video 1x lihatnya!' }, { quoted: m })
-
-                let realMsg = quotedMsg.viewOnceMessageV2?.message || quotedMsg.viewOnceMessage?.message || quotedMsg.viewOnceMessageV2Extension?.message || quotedMsg
-                const mediaType = Object.keys(realMsg).find(key => key === 'imageMessage' || key === 'videoMessage')
-                
-                if (!mediaType) return sock.sendMessage(remoteJid, { text: 'yang lu reply bukan media bos!' }, { quoted: m })
-
-                const mediaObj = realMsg[mediaType]
-                const isViewOnce = mediaObj?.viewOnce || quotedMsg.viewOnceMessageV2 || quotedMsg.viewOnceMessage || quotedMsg.viewOnceMessageV2Extension
-                
-                if (!isViewOnce) return sock.sendMessage(remoteJid, { text: '⚠️ Kocak, itu kan foto/video biasa, ngapain dibobol!' }, { quoted: m })
-
-                await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key } })
- 
-                try {
-                    const stream = await downloadContentFromMessage(mediaObj, mediaType.replace('Message', ''))
-                    let buffer = Buffer.from([])
-                    for await(const chunk of stream) buffer = Buffer.concat([buffer, chunk])
-
-                    const finalCaption = mediaObj.caption ? `\n> *Caption:* ${mediaObj.caption}` : ''
-
-                    if (mediaType === 'imageMessage') {
-                        await sock.sendMessage(remoteJid, { image: buffer, caption: finalCaption }, { quoted: m })
-                    } else if (mediaType === 'videoMessage') {
-                        await sock.sendMessage(remoteJid, { video: buffer, caption: finalCaption, mimetype: 'video/mp4' }, { quoted: m })
-                    }
-                    
-                    await sock.sendMessage(remoteJid, { react: { text: '🔥', key: m.key } })
-                } catch (err) {
-                    console.error('Error bobol RVO:', err)
-                    await sock.sendMessage(remoteJid, { text: 'Waduh, gagal jir' }, { quoted: m })
-                }
-                break
-
-            case 'swemot':
-                if (isOwner) {
-                    await handleSwCommand(sock, m, args)
-                } else {
-                    await sock.sendMessage(remoteJid, { text: '⛔ Eits, dilarang masuk! Ini fitur khusus Bos Xenn.' }, { quoted: m })
-                }
-                break
-
-            case 'shutdown':
-                if (!isOwner) return
-                await sock.sendMessage(remoteJid, { text: '👋 Oke bos, bot cabut dulu...' })
-                process.exit()
-                break
-
-            case 'ttdl':
-            case 'tiktok':
-                if (!args[0]) return sock.sendMessage(remoteJid, { text: '⚠ *Mana link TikTok-nya ngab?*' }, { quoted: m })
-
-                await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key } })
-                try {
-                    const result = await tiktok2(args[0])
-                    await sock.sendMessage(
-                        remoteJid,
-                        {
-                            video: result.videoBuffer,
-                            mimetype: 'video/mp4',
-                            caption: `*🎁 Xenn Tiktok Downloader*\n\n👤 *Author:* @${result.author}\n📝 *Desc:* ${result.title}\n🎵 *Music:* ${result.music}\n\n> *di-download pake keringat xennBot*`
-                        },
-                        { quoted: m }
-                    )
-                    await sock.sendMessage(remoteJid, { react: { text: '✅', key: m.key } })
-                } catch (error) {
-                    await sock.sendMessage(remoteJid, { text: '❌ *Waduh gagal!* Link-nya bener ga tuh?' }, { quoted: m })
-                }
-                break
-
-            case 'hidetag':
-                if (!remoteJid.endsWith('@g.us') || !isOwner) return
-                try {
-                    const groupMetadata = await sock.groupMetadata(remoteJid)
-                    const participants = groupMetadata.participants
-                    const allMembers = participants.map(mem => mem.id)
-                    const commandRegex = new RegExp(`^@${command}\\s*`, 'i')
-                    const pesan = textMessage.replace(commandRegex, '').trim() || '📢 *PENGUMUMAN PENTING* 📢'
-
-                    await sock.sendMessage(remoteJid, { text: pesan, mentions: allMembers })
-                } catch (err) {
-                    await sock.sendMessage(remoteJid, { text: '❌ Waduh gagal hidetag, bot udah jadi admin belum?' }, { quoted: m })
-                }
-                break
-
-            // --- FITUR STICKER BARU ---
-            case 's':
-            case 'sticker':
-                try {
-                    const quoted = m.message.extendedTextMessage?.contextInfo?.quotedMessage
-                    const isMedia = m.message.imageMessage || m.message.videoMessage || quoted?.imageMessage || quoted?.videoMessage
-                    
-                    if (!isMedia) return await sock.sendMessage(remoteJid, { text: '⚠️ Kirim/reply gambar atau video (<10 detik) dengan caption @s' }, { quoted: m })
-
-                    await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key }})
-                    
-                    // Nentuin target download (pesan asli atau yang direply)
-                    let mediaTarget = quoted?.imageMessage || quoted?.videoMessage ? quoted : m.message
-                    let mediaType = mediaTarget.imageMessage ? 'imageMessage' : 'videoMessage'
-                    
-                    const stream = await downloadContentFromMessage(mediaTarget[mediaType], mediaType.replace('Message', ''))
-                    let mediaBuffer = Buffer.from([])
-                    for await(const chunk of stream) mediaBuffer = Buffer.concat([mediaBuffer, chunk])
-
-                    let stickerType = mediaType === 'videoMessage' ? StickerTypes.CROP : StickerTypes.FULL;
-                    const stickerBuffer = await createSticker(mediaBuffer, stickerType)
-                    
-                    await sock.sendMessage(remoteJid, { sticker: stickerBuffer }, { quoted: m })
-                    await sock.sendMessage(remoteJid, { react: { text: '✅', key: m.key }})
-                } catch (err) {
-                    console.error(err)
-                    await sock.sendMessage(remoteJid, { text: '❌ Gagal bikin stiker ngab.' }, { quoted: m })
-                }
-                break
-
-            case 'brat':
-                if (!textArgs) return await sock.sendMessage(remoteJid, { text: '⚠️ Contoh: @brat anak rpl nih senggol dong' }, { quoted: m })
-                await sock.sendMessage(remoteJid, { react: { text: '✍️', key: m.key }})
-
-                const bratBuffer = await makeBratSticker(textArgs)
-                if (!bratBuffer) return await sock.sendMessage(remoteJid, { text: '❌ Gagal membuat brat sticker.' }, { quoted: m })
-
-                await sock.sendMessage(remoteJid, { sticker: bratBuffer }, { quoted: m })
-                break
-
-            case 'meme':
-                try {
-                    const quoted = m.message.extendedTextMessage?.contextInfo?.quotedMessage
-                    const isImage = m.message.imageMessage || quoted?.imageMessage
-                    
-                    if (!isImage) return await sock.sendMessage(remoteJid, { text: '⚠️ Balas/kirim GAMBAR dengan caption @meme Atas | Bawah' }, { quoted: m })
-                    if (!textArgs.includes('|')) return await sock.sendMessage(remoteJid, { text: '⚠️ Gunakan format: @meme Teks Atas | Teks Bawah' }, { quoted: m })
-
-                    await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key }})
-                    
-                    let mediaTarget = quoted?.imageMessage ? quoted : m.message
-                    const stream = await downloadContentFromMessage(mediaTarget.imageMessage, 'image')
-                    let mediaBuffer = Buffer.from([])
-                    for await(const chunk of stream) mediaBuffer = Buffer.concat([mediaBuffer, chunk])
-
-                    const [topText, bottomText] = textArgs.split('|').map(t => t.trim())
-
-                    const image = await Jimp.read(mediaBuffer)
-                    image.cover(512, 512)
-                    const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE)
-                    const fontBorder = await Jimp.loadFont(Jimp.FONT_SANS_64_BLACK)
-
-                    const printOutline = (img, fnt, fntBorder, x, y, txt, width) => {
-                         img.print(fntBorder, x-2, y-2, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
-                         img.print(fntBorder, x+2, y-2, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
-                         img.print(fntBorder, x-2, y+2, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
-                         img.print(fntBorder, x+2, y+2, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
-                         img.print(fnt, x, y, { text: txt, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, width)
-                    }
-
-                    if (topText) printOutline(image, font, fontBorder, 10, 20, topText, 492)
-                    if (bottomText) {
-                        const bottomHeight = Jimp.measureTextHeight(font, bottomText, 492)
-                        printOutline(image, font, fontBorder, 10, 512 - bottomHeight - 20, bottomText, 492)
-                    }
-
-                    const memeBuffer = await image.getBufferAsync(Jimp.MIME_PNG)
-                    const stickerMeme = await createSticker(memeBuffer, StickerTypes.FULL)
-                    
-                    await sock.sendMessage(remoteJid, { sticker: stickerMeme }, { quoted: m })
-                    await sock.sendMessage(remoteJid, { react: { text: '✅', key: m.key }})
-                } catch (err) {
-                    console.error(err)
-                    await sock.sendMessage(remoteJid, { text: '❌ Gagal bikin meme ngab.' }, { quoted: m })
-                }
-                break
-
-        // --- FITUR AUTO-KICK ---
-            case 'kick':
-            case 'tendang':
-                if (!isGroup) return await sock.sendMessage(remoteJid, { text: '⚠️ Woy, fitur ini cuma bisa dipake di dalem grup!' }, { quoted: m })
-                if (!isSenderAdmin && !isOwner) return await sock.sendMessage(remoteJid, { text: '⚠️ Lu sapa? Fitur sadis ini cuma buat Admin & Owner!' }, { quoted: m })
-                if (!isBotAdmin) return await sock.sendMessage(remoteJid, { text: '⚠️ Botnya jadiin admin dulu bos, gimana mau nendang anak orang!' }, { quoted: m })
-
-                // Cari tau siapa targetnya (bisa dari reply chat atau di-tag langsung)
-                const quotedUser = m.message.extendedTextMessage?.contextInfo?.participant
-                const mentionedUsers = m.message.extendedTextMessage?.contextInfo?.mentionedJid || []
-                const targetKick = quotedUser || (mentionedUsers.length > 0 ? mentionedUsers[0] : null)
-
-                if (!targetKick) return await sock.sendMessage(remoteJid, { text: '⚠️ Tag atau balas chat orang yang mau ditendang!\nContoh: *@kick @orangnya*' }, { quoted: m })
-                if (targetKick === ownerNumber + '@s.whatsapp.net') return await sock.sendMessage(remoteJid, { text: '⚠️ Mana berani gue nendang Bos Xenn!' }, { quoted: m })
-                if (targetKick === sock.user.id.split(':')[0] + '@s.whatsapp.net') return await sock.sendMessage(remoteJid, { text: '⚠️ Buset, botnya mau nendang diri sendiri?!' }, { quoted: m })
-
-                // Eksekusi Tendang
-                await sock.sendMessage(remoteJid, { text: `👢 Bye bye @${targetKick.split('@')[0]}... Sayonara!`, mentions: [targetKick] })
-                await sock.groupParticipantsUpdate(remoteJid, [targetKick], 'remove')
-                break
-                }
-            }
-        } catch (err) {
-            console.error('⚠️ Error di handler utama:', err)
-            }
+    } catch (err) {
+        console.error('⚠️ Error di handler utama:', err)
+    }
 }
