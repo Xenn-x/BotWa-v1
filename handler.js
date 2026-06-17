@@ -104,9 +104,8 @@ const commands = {
     * 🖥️ *OS:* ${os.type()} ${os.release()} (${os.arch()})
     * ⚙️ *CPU:* ${cpuModel} (${cpuCores} Cores)
     * 📊 *RAM:* ${formatSize(usedMem)} / ${formatSize(totalMem)}
-    * 🏓 *Status:* Mesin nyala dan siap tempur! ✅
             
-    > *XennBot System Monitor*`;
+> *XennBot System Monitor*`;
             
                 await sock.sendMessage(remoteJid, { text: serverInfo }, { quoted: m });
             }
