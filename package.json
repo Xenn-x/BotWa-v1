@@ -1,0 +1,20 @@
+{
+  "name": "xennbot-v2",
+  "version": "2.0.0",
+  "description": "Bot WA Remake by Xenn",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "axios": "^1.13.4",
+    "baileys": "github:WhiskeySockets/Baileys",
+    "pino": "^10.3.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "jimp": "^0.22.10",
+    "wa-sticker-formatter": "^4.4.4"
+  }
+}
