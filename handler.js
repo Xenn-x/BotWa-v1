@@ -73,21 +73,23 @@ const commands = {
             await sock.sendMessage(remoteJid, { text: menuText }, { quoted: m })
         }
     },
-    'ping': {
+        'ping': {
             kategori: '🛠️ UTILITY',
             desc: 'Cek respon & info server',
             aliases: ['info', 'server'],
             run: async (sock, m, remoteJid, args, textArgs, ctx) => {
-                // Panggil modul OS bawaan Node.js
                 const os = await import('os');
-                
+
+                // Kalkulasi Latensi (Ping)
+                const timestamp = m.messageTimestamp.low ? m.messageTimestamp.low : m.messageTimestamp;
+                const latency = Date.now() - (timestamp * 1000);
+
                 // Kalkulasi RAM
                 const totalMem = os.totalmem();
                 const freeMem = os.freemem();
                 const usedMem = totalMem - freeMem;
-                
                 const formatSize = (bytes) => (bytes / (1024 ** 3)).toFixed(2) + ' GB';
-                
+
                 // Kalkulasi Uptime Server
                 const uptimeSeconds = os.uptime();
                 const days = Math.floor(uptimeSeconds / (3600 * 24));
@@ -98,14 +100,15 @@ const commands = {
                 const cpuModel = os.cpus()[0].model;
                 const cpuCores = os.cpus().length;
             
-                const serverInfo = `*💻 SERVER STATUS 💻*
-                
-    * ⏱️ *Uptime:* ${days} Hari ${hours} Jam ${minutes} Menit
-    * 🖥️ *OS:* ${os.type()} ${os.release()} (${os.arch()})
-    * ⚙️ *CPU:* ${cpuModel} (${cpuCores} Cores)
-    * 📊 *RAM:* ${formatSize(usedMem)} / ${formatSize(totalMem)}
+                const serverInfo = `*>-< || SERVER STATUS || >-<*
+
+    * >- Speed:* ${latency} ms
+    * >- Uptime:* ${days} Hari ${hours} Jam ${minutes} Menit
+    * >- OS:* ${os.type()} ${os.release()} (${os.arch()})
+    * >- CPU:* ${cpuModel} (${cpuCores} Cores)
+    * >- RAM:* ${formatSize(usedMem)} / ${formatSize(totalMem)}
             
-> *XennBot System Monitor*`;
+> *Xenn-Bot System Monitor*`;
             
                 await sock.sendMessage(remoteJid, { text: serverInfo }, { quoted: m });
             }
