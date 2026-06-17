@@ -372,7 +372,7 @@ const remoteJid = m.key.remoteJid;
             
             // Sekarang ngeceknya pake senderJid yang udah tembus anti-LID
             isSenderAdmin = groupAdmins.includes(senderJid);
-            const botId = 263548185911443
+            const botId = 42782471274548
             isBotAdmin = groupAdmins.includes(botId);
         } 
 
