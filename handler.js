@@ -152,8 +152,6 @@ export async function messageHandler(sock, m) {
         // ==========================================
         // 🛡️ SISTEM KEAMANAN GRUP (ANTI-LINK)
         // ==========================================
-        let isSenderAdmin = false
-        let isBotAdmin = false
 
         if (isGroup) {
             const groupMeta = await sock.groupMetadata(remoteJid)
