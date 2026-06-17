@@ -315,7 +315,7 @@ const commands = {
     'kick': {
         kategori: '🛡️ ADMIN & GRUP',
         desc: 'Tendang member dari grup',
-        aliases: ['tendang', 'kill him'],
+        aliases: ['tendang', 'kill_him'],
         run: async (sock, m, remoteJid, args, textArgs, ctx) => {
             if (!ctx.isGroup) return await sock.sendMessage(remoteJid, { text: '⚠️ Woy, fitur ini cuma bisa dipake di dalem grup!' }, { quoted: m })
             if (!ctx.isSenderAdmin && !ctx.isOwner) return await sock.sendMessage(remoteJid, { text: '⚠️ Lu sapa? Fitur sadis ini cuma buat Admin & Owner!' }, { quoted: m })
