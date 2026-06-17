@@ -335,12 +335,16 @@ const commands = {
     }
 };
 
-// Daftarin alias buat menu
-commands['help'] = { hide: true, run: commands['menu'].run };
-commands['readviewonce'] = { hide: true, run: commands['rvo'].run };
-commands['tiktok'] = { hide: true, run: commands['ttdl'].run };
-commands['sticker'] = { hide: true, run: commands['s'].run };
-commands['tendang'] = { hide: true, run: commands['kick'].run };
+// ==========================================
+// ⚙️ AUTO-REGISTER ALIAS (Biar gk ribet nulis manual)
+// ==========================================
+for (const cmd in commands) {
+    if (commands[cmd].aliases) {
+        commands[cmd].aliases.forEach(alias => {
+            commands[alias] = { hide: true, run: commands[cmd].run };
+        });
+    }
+}
 
 // --- HANDLER UTAMA ---
 export async function messageHandler(sock, m) {
