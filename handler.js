@@ -46,6 +46,42 @@ const makeBratSticker = async (text) => {
     return await createSticker(imageBuffer, StickerTypes.FULL);
 };
 
+// ==========================================
+// 🧠 COMMAND REGISTRY (AUTO-UPDATE MENU)
+// ==========================================
+const commands = {
+    // 1. Kita masukin Menu aja dulu sebagai pancingan
+    'menu': {
+        kategori: '🛠️ UTILITY',
+        desc: 'Nampilin daftar fitur otomatis',
+        aliases: ['help'],
+        run: async (sock, m, remoteJid, args, textArgs, ctx) => {
+            let menuText = `*🤖 XENNBOT V2 COMMAND MENU 🤖*\n\n👤 *User :* ${ctx.pushName}\n⏰ *Waktu :* ${ctx.jam}\n\n`;
+            
+            const grouped = {};
+            for (const cmd in commands) {
+                if (commands[cmd].hide) continue; 
+                const cat = commands[cmd].kategori;
+                if (!grouped[cat]) grouped[cat] = [];
+                
+                const aliasText = commands[cmd].aliases ? ` / @${commands[cmd].aliases.join(' / @')}` : '';
+                grouped[cat].push(`- *@${cmd}${aliasText}* : ${commands[cmd].desc}`);
+            }
+
+            for (const cat in grouped) {
+                menuText += `*${cat}*\n${grouped[cat].join('\n')}\n\n`;
+            }
+            menuText += `> *Bot by Xenn 💻 | Auto-Generated Menu*`;
+
+            await sock.sendMessage(remoteJid, { text: menuText }, { quoted: m })
+        }
+    }
+    // Nanti lu bisa tambahin fitur lain ke sini pelan-pelan
+};
+
+// Daftarin alias buat menu
+commands['help'] = { hide: true, run: commands['menu'].run };
+
 // --- HANDLER UTAMA ---
 export async function messageHandler(sock, m) {
     try {
@@ -96,6 +132,40 @@ export async function messageHandler(sock, m) {
             console.log(`${senderNumber} (${pushName}) : ${logType}`)
             console.log(`${jam} ${tglBulanTahun}`)
         }
+
+        // ==========================================
+        // 🛡️ SISTEM KEAMANAN GRUP (ANTI-LINK)
+        // ==========================================
+        let isSenderAdmin = false
+        let isBotAdmin = false
+
+        if (isGroup) {
+            const groupMeta = await sock.groupMetadata(remoteJid)
+            const groupAdmins = groupMeta.participants.filter(v => v.admin !== null).map(v => v.id)
+            
+            isSenderAdmin = groupAdmins.includes(senderJid)
+            // Cek apakah bot dikasih pangkat admin
+            const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+            isBotAdmin = groupAdmins.includes(botId)
+
+            // Radar Pendeteksi Link (WA, Web, Pinjol, dll)
+            const linkRegex = /(chat\.whatsapp\.com|wa\.me|bit\.ly|https?:\/\/)/i
+            
+            if (linkRegex.test(textMessage) && !isSenderAdmin && !isOwner) {
+                if (!isBotAdmin) {
+                    console.log('Ada yang ngirim link, tapi bot bukan admin jadi gabisa ngapus pesannya.')
+                } else {
+                    // Eksekusi: Hapus pesan & kasih peringatan
+                    await sock.sendMessage(remoteJid, { delete: m.key })
+                    await sock.sendMessage(remoteJid, { 
+                        text: `⚠️ *ANTI-LINK DETECTED*\n\nMaaf @${senderNumber}, ngirim link dilarang keras di grup ini. Pesan lu gue sapu! 🧹`,
+                        mentions: [senderJid]
+                    })
+                    return // Berhenti di sini, command di bawah gak akan dieksekusi
+                }
+            }
+        }
+        // ==========================================
         // ==========================================
 
         if (!textMessage.startsWith('@')) return
@@ -103,6 +173,25 @@ export async function messageHandler(sock, m) {
         const args = textMessage.slice(1).trim().split(/\s+/)
         const command = args.shift().toLowerCase()
         const textArgs = args.join(' ')
+
+        const ctx = { 
+            isGroup, isSenderAdmin: false, isOwner, isBotAdmin: false, // (isSenderAdmin dll sesuain sama var di code lu ya)
+            pushName: m.pushName || 'User', 
+            jam: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), 
+            senderNumber, senderJid, textMessage, command 
+        }
+
+        // 🚦 EXECUTION ROUTER (Cek di Object dulu)
+        if (commands[command]) {
+            try {
+                await commands[command].run(sock, m, remoteJid, args, textArgs, ctx)
+            } catch (err) {
+                console.error(`⚠️ Error di command ${command}:`, err)
+                await sock.sendMessage(remoteJid, { text: '❌ Waduh, mesin botnya error pas jalanin ini ngab.' }, { quoted: m })
+            }
+        } 
+        // Kalau ga ada di Object, baru lari ke Switch-Case lama lu
+        else {
 
         switch (command) {
             case 'ping':
@@ -285,8 +374,30 @@ export async function messageHandler(sock, m) {
                     await sock.sendMessage(remoteJid, { text: '❌ Gagal bikin meme ngab.' }, { quoted: m })
                 }
                 break
-        }
-    } catch (err) {
-        console.error('⚠️ Error di handler utama:', err)
-    }
+
+        // --- FITUR AUTO-KICK ---
+            case 'kick':
+            case 'tendang':
+                if (!isGroup) return await sock.sendMessage(remoteJid, { text: '⚠️ Woy, fitur ini cuma bisa dipake di dalem grup!' }, { quoted: m })
+                if (!isSenderAdmin && !isOwner) return await sock.sendMessage(remoteJid, { text: '⚠️ Lu sapa? Fitur sadis ini cuma buat Admin & Owner!' }, { quoted: m })
+                if (!isBotAdmin) return await sock.sendMessage(remoteJid, { text: '⚠️ Botnya jadiin admin dulu bos, gimana mau nendang anak orang!' }, { quoted: m })
+
+                // Cari tau siapa targetnya (bisa dari reply chat atau di-tag langsung)
+                const quotedUser = m.message.extendedTextMessage?.contextInfo?.participant
+                const mentionedUsers = m.message.extendedTextMessage?.contextInfo?.mentionedJid || []
+                const targetKick = quotedUser || (mentionedUsers.length > 0 ? mentionedUsers[0] : null)
+
+                if (!targetKick) return await sock.sendMessage(remoteJid, { text: '⚠️ Tag atau balas chat orang yang mau ditendang!\nContoh: *@kick @orangnya*' }, { quoted: m })
+                if (targetKick === ownerNumber + '@s.whatsapp.net') return await sock.sendMessage(remoteJid, { text: '⚠️ Mana berani gue nendang Bos Xenn!' }, { quoted: m })
+                if (targetKick === sock.user.id.split(':')[0] + '@s.whatsapp.net') return await sock.sendMessage(remoteJid, { text: '⚠️ Buset, botnya mau nendang diri sendiri?!' }, { quoted: m })
+
+                // Eksekusi Tendang
+                await sock.sendMessage(remoteJid, { text: `👢 Bye bye @${targetKick.split('@')[0]}... Sayonara!`, mentions: [targetKick] })
+                await sock.groupParticipantsUpdate(remoteJid, [targetKick], 'remove')
+                break
+                }
+            }
+        } catch (err) {
+            console.error('⚠️ Error di handler utama:', err)
+            }
 }

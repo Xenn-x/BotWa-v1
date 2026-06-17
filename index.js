@@ -72,6 +72,30 @@ async function startBot() {
             console.error('⚠️ Error pas nge-load handler:', error);
         }
     });
+
+    // Dengerin pas ada yang keluar/masuk grup
+    sock.ev.on('group-participants.update', async (update) => {
+        try {
+            const { id, participants, action } = update;
+            
+            // Looping buat nyapa/ngucapin selamat tinggal
+            for (const participant of participants) {
+                if (action === 'add') {
+                    await sock.sendMessage(id, { 
+                        text: `Welcome to the club bos @${participant.split('@')[0]}! 🥳\n\nJangan lupa patuhi rules grup ya, jangan rusuh!`, 
+                        mentions: [participant] 
+                    });
+                } else if (action === 'remove') {
+                    await sock.sendMessage(id, { 
+                        text: `Selamat jalan @${participant.split('@')[0]}... Semoga tenang di grup sebelah 👋`, 
+                        mentions: [participant] 
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('⚠️ Error fitur welcome/goodbye:', err);
+        }
+    });
 }
 
 startBot();
