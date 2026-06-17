@@ -329,7 +329,7 @@ const commands = {
             if (targetKick === ownerNumber + '@s.whatsapp.net') return await sock.sendMessage(remoteJid, { text: '⚠️ Mana berani gue nendang Bos Xenn!' }, { quoted: m })
             if (targetKick === sock.user.id.split(':')[0] + '@s.whatsapp.net') return await sock.sendMessage(remoteJid, { text: '⚠️ Buset, botnya mau nendang diri sendiri?!' }, { quoted: m })
 
-            await sock.sendMessage(remoteJid, { text: `👢 Bye bye @${targetKick.split('@')[0]}... Sayonara!`, mentions: [targetKick] })
+            await sock.sendMessage(remoteJid, { text: `Bye bye @${targetKick.split('@')[0]}... Sayonara!`, mentions: [targetKick] })
             await sock.groupParticipantsUpdate(remoteJid, [targetKick], 'remove')
         }
     }
@@ -372,8 +372,8 @@ const remoteJid = m.key.remoteJid;
             
             // Sekarang ngeceknya pake senderJid yang udah tembus anti-LID
             isSenderAdmin = groupAdmins.includes(senderJid);
-            const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-            isBotAdmin = groupAdmins.includes(botId);
+            const botNumberOnly = sock.user.id.split(':')[0].split('@')[0]; // Ambil murni angkanya aja
+            isBotAdmin = groupAdmins.some(adminId => adminId.includes(botNumberOnly));
         } 
 
         // 3. CEK STATUS WA
