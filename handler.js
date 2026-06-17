@@ -372,8 +372,8 @@ const remoteJid = m.key.remoteJid;
             
             // Sekarang ngeceknya pake senderJid yang udah tembus anti-LID
             isSenderAdmin = groupAdmins.includes(senderJid);
-            const botNumberOnly = sock.user.id.split(':')[0].split('@')[0]; // Ambil murni angkanya aja
-            isBotAdmin = groupAdmins.some(adminId => adminId.includes(botNumberOnly));
+            const botId = 263548185911443
+            isBotAdmin = groupAdmins.includes(botId);
         } 
 
         // 3. CEK STATUS WA
