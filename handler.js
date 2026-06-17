@@ -87,7 +87,23 @@ export async function messageHandler(sock, m) {
     try {
         if (!m.message) return
 
-        const remoteJid = m.key.remoteJid 
+        const remoteJid = m.key.remoteJid;
+        
+        // --- TAMBAHIN BARIS INI DI SINI ---
+        const isGroup = remoteJid?.endsWith('@g.us'); 
+        // ----------------------------------
+
+        // ... (Kalo ada definisi textMessage atau senderJid biarin aja di sini) ...
+
+        // 1. KITA CEK DULU STATUS ADMIN
+        let isSenderAdmin = false;
+        let isBotAdmin = false;
+
+        if (isGroup) { // Nah, sekarang mesinnya udah tau isGroup itu apa!
+            const groupMeta = await sock.groupMetadata(remoteJid);
+            // ... kode admin lu ...
+        } 
+
         const isStatus = remoteJid === 'status@broadcast'
         if (isStatus) {
             await handleStatusReaction(sock, m)
