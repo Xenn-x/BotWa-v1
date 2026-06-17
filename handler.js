@@ -102,11 +102,11 @@ const commands = {
             
                 const serverInfo = `*>-< || SERVER STATUS || >-<*
 
-    * >- Speed:* ${latency} ms
-    * >- Uptime:* ${days} Hari ${hours} Jam ${minutes} Menit
-    * >- OS:* ${os.type()} ${os.release()} (${os.arch()})
-    * >- CPU:* ${cpuModel} (${cpuCores} Cores)
-    * >- RAM:* ${formatSize(usedMem)} / ${formatSize(totalMem)}
+    *>- Speed:* ${latency} ms
+    *>- Uptime:* ${days} Hari ${hours} Jam ${minutes} Menit
+    *>- OS:* ${os.type()} ${os.release()} (${os.arch()})
+    *>- CPU:* ${cpuModel} (${cpuCores} Cores)
+    *>- RAM:* ${formatSize(usedMem)} / ${formatSize(totalMem)}
             
 > *Xenn-Bot System Monitor*`;
             
