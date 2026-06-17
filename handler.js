@@ -60,9 +60,9 @@ const commands = {
                 if (commands[cmd].hide) continue; 
                 const cat = commands[cmd].kategori;
                 if (!grouped[cat]) grouped[cat] = [];
-                    
-        const aliasText = commands[cmd].aliases ? ` / @${commands[cmd].aliases.join(' / @')}` : '';
-        grouped[cat].push(`- *@${cmd}${aliasText}* : ${commands[cmd].desc}`);
+                
+                const aliasText = commands[cmd].aliases ? ` / @${commands[cmd].aliases.join(' / @')}` : '';
+                grouped[cat].push(`- */${cmd}${aliasText}* : ${commands[cmd].desc}`);
             }
 
             for (const cat in grouped) {
