@@ -54,7 +54,7 @@ async function startBot() {
                 startBot(); 
             }
         } else if (connection === 'open') {
-            console.log('✅ ASIK! Bot udah online dan siap tempur bosku!');
+            console.log('Bot online');
         }
     });
 
