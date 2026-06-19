@@ -178,25 +178,44 @@ const commands = {
     'ttdl': {
         kategori: '🎨 STICKER & MEDIA',
         desc: 'Download VT tanpa watermark',
-        aliases: ['tiktok'],
-        run: async (sock, m, remoteJid, args) => {
+        aliases: ['tiktok', 'tiktokdl', 'tikdl'],
+run: async (sock, m, remoteJid, args) => {
             if (!args[0]) return sock.sendMessage(remoteJid, { text: '⚠ *Mana link TikTok-nya ngab?*' }, { quoted: m })
 
             await sock.sendMessage(remoteJid, { react: { text: '⏳', key: m.key } })
             try {
                 const result = await tiktok2(args[0])
+                
+                // 1. Kirim Videonya Dulu (Caption kita bersihin dari link music)
                 await sock.sendMessage(
                     remoteJid,
                     {
                         video: result.videoBuffer,
                         mimetype: 'video/mp4',
-                        caption: `*🎁 Xenn Tiktok Downloader*\n\n👤 *Author:* @${result.author}\n📝 *Desc:* ${result.title}\n🎵 *Music:* ${result.music}\n\n> *di-download pake keringat xennBot*`
+                        caption: `*🎁 Xenn Tiktok Downloader*\n\n👤 *Author:* @${result.author}\n📝 *Desc:* ${result.title}\n\n> *di-download pake keringat xennBot*`
                     },
                     { quoted: m }
                 )
+
+                // 2. Susul Kirim Lagu/Audionya
+                if (result.music) {
+                    // Jaga-jaga kalau link musik dari TikWM buntung
+                    const musicUrl = result.music.startsWith('http') ? result.music : `https://www.tikwm.com${result.music}`;
+                    
+                    await sock.sendMessage(
+                        remoteJid,
+                        {
+                            audio: { url: musicUrl },
+                            mimetype: 'audio/mp4', // Format standar lagu di WA
+                            ptt: false // Catatan: Ubah 'false' jadi 'true' kalau lu mau lagunya dikirim dalam wujud VN (Voice Note)
+                        },
+                        { quoted: m }
+                    )
+                }
+
                 await sock.sendMessage(remoteJid, { react: { text: '✅', key: m.key } })
             } catch (error) {
-                await sock.sendMessage(remoteJid, { text: '❌ *Waduh gagal!* Link-nya bener ga tuh?' }, { quoted: m })
+                await sock.sendMessage(remoteJid, { react: { text: '❌', key: m.key } })
             }
         }
     },
