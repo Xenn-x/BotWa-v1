@@ -54,7 +54,7 @@ async function startBot() {
                 startBot(); 
             }
         } else if (connection === 'open') {
-            console.log('Bot online');
+            console.log('✅ ASIK! Bot udah online dan siap tempur bosku!');
         }
     });
 
@@ -80,9 +80,6 @@ async function startBot() {
             
             // Looping buat nyapa/ngucapin selamat tinggal
             for (const participant of participants) {
-    // 1. Pastikan kita ngambil string ID-nya dulu, entah itu Object atau String
-    const jid = typeof participant === 'object' ? participant.id : participant;
-    
     if (action === 'add') {
         await sock.sendMessage(id, { 
             text: `Welcome to the club bos @${jid.split('@')[0]}! 🥳\n\nJangan lupa patuhi rules grup ya, jangan rusuh!`, 
