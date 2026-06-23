@@ -176,7 +176,7 @@ const commands = {
         }
     },
     'ttdl': {
-        kategori: '🎨 STICKER & MEDIA',
+        kategori: '>- STICKER & MEDIA',
         desc: 'Download VT tanpa watermark',
         aliases: ['tiktok', 'tiktokdl', 'tikdl'],
         run: async (sock, m, remoteJid, args) => {
